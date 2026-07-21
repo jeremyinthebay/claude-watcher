@@ -60,7 +60,9 @@ Also scan ~/.claude/projects/*/*.jsonl (exclude paths containing
 (split on "-Projects-"; fall back to a cleaned suffix, and if the result is
 shorter than 3 chars call it "home"), state from mtime, "doing" via the same
 last-action parser, model from the newest assistant line's message.model.
-Give these cards a distinct "CLI" chip. If you use claude CLI at all — or
+Give these cards a distinct "CLI" chip. Their subagents live in the SAME
+layout (<project>/<session-uuid>/subagents/agent-*.jsonl) — run them through
+the same per-subagent parser so CLI fan-outs get role/runtime/token rows too. If you use claude CLI at all — or
 run any unattended loop with it — these are the sessions you most want
 watched.
 

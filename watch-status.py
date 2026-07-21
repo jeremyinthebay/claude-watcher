@@ -10,12 +10,9 @@ Run every 60s via launchd (see install.sh). Config below or via env vars."""
 import json, os, time, glob, re
 
 HOME = os.path.expanduser("~")
-# Where output lands. Point a web server at it, or just open index.html.
 OUT_DIR = os.environ.get("CW_OUT", os.path.join(HOME, ".claude-watcher"))
 OUT = os.path.join(OUT_DIR, "status.json")
-# Cowork (Claude desktop agent) session store — same path on every Mac.
 BASE = os.path.join(HOME, "Library/Application Support/Claude/local-agent-mode-sessions")
-# Optional: a relay/automation dir with .stop/.halt kill-switch files and logs.
 RELAY = os.environ.get("CW_RELAY_DIR", "")
 TEMPLATE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "dashboard.html")
 now = time.time()
@@ -93,21 +90,21 @@ def _role(task):
     return ""
 
 
-def subagent_details(sdir, limit=8):
+def subagent_details(files, limit=8, max_age=1800):
     """Per-subagent rows: role, task, last action, start time, runtime, and
     token spend (sum of output_tokens across its assistant turns). Reads the
-    whole transcript (capped 8 MB) — subagent files are short-lived and small."""
+    whole transcript (capped 8 MB) — subagent files are short-lived and small.
+    Works for Cowork sessions and Claude Code CLI runs alike: same layout."""
     import datetime
     out = []
-    files = glob.glob(os.path.join(sdir, ".claude/projects/*/*/subagents/*.jsonl"))
-    files.sort(key=lambda p: os.path.getmtime(p), reverse=True)
+    files = sorted(files, key=lambda p: os.path.getmtime(p), reverse=True)
     for p in files[:limit]:
         try:
             mt = os.path.getmtime(p)
         except OSError:
             continue
         age = int(now - mt)
-        if age > 1800:
+        if age > max_age:
             continue
         start_ts, task, doing, tok = None, "", "", 0
         try:
@@ -181,6 +178,13 @@ def session_tail_info(sdir):
     except Exception:
         return info
     info["doing"] = extract_last_action(data[-400000:])
+    info["spark"] = spark_from(data)
+    return info
+
+
+def spark_from(data):
+    """12 buckets x 5 min of transcript-event density for the last hour."""
+    import datetime
     buckets = [0] * 12
     for l in data.splitlines():
         i = l.find('"timestamp":"')
@@ -195,8 +199,7 @@ def session_tail_info(sdir):
         mins = (now - t) / 60.0
         if 0 <= mins < 60:
             buckets[11 - int(mins // 5)] += 1
-    info["spark"] = buckets
-    return info
+    return buckets
 
 
 def cli_sessions(limit=8):
@@ -222,11 +225,13 @@ def cli_sessions(limit=8):
         if len(name) < 3:
             name = "home"
         state = "working" if age < 150 else ("quiet" if age < 1800 else "idle")
-        doing, model, start_ts = "", "", None
+        doing, model, start_ts, spark = "", "", None, []
+        sl = subagent_details(glob.glob(p[:-6] + "/subagents/*.jsonl")) if state in ("working", "quiet") else []
         if state in ("working", "quiet"):
             try:
-                tail = open(p, "rb").read()[-200000:].decode("utf-8", "replace")
-                doing = extract_last_action(tail)
+                tail = open(p, "rb").read()[-2000000:].decode("utf-8", "replace")
+                doing = extract_last_action(tail[-200000:])
+                spark = spark_from(tail)
                 for l in reversed(tail.splitlines()):
                     try:
                         j = json.loads(l)
@@ -258,10 +263,10 @@ def cli_sessions(limit=8):
             "model": model or "cli",
             "age_s": age,
             "state": state,
-            "subagents": 0,
+            "subagents": len([a for a in sl if a["active"]]),
             "doing": doing,
-            "spark": [],
-            "subagent_list": [],
+            "spark": spark,
+            "subagent_list": sl,
         })
     return out
 
@@ -295,7 +300,7 @@ for meta_path in glob.glob(os.path.join(BASE, "*/*/local_*.json")):
         "kind": "cowork",
         "doing": ti["doing"],
         "spark": ti["spark"],
-        "subagent_list": subagent_details(sdir) if state in ("working", "quiet") else [],
+        "subagent_list": subagent_details(glob.glob(os.path.join(sdir, ".claude/projects/*/*/subagents/*.jsonl"))) if state in ("working", "quiet") else [],
     })
 sessions.extend(cli_sessions())
 sessions.sort(key=lambda s: s["age_s"])
@@ -329,9 +334,6 @@ tmp = OUT + ".tmp"
 json.dump(status, open(tmp, "w"), indent=1)
 os.replace(tmp, OUT)
 
-# Render the self-contained dashboard: inject the data into the template so
-# the page works from file:// with zero servers. (It also still fetches
-# status.json when hosted, so either deployment mode works.)
 try:
     t = open(TEMPLATE, encoding="utf-8").read()
     page = t.replace("var INLINE=null;", "var INLINE=" + json.dumps(status) + ";", 1)
