@@ -70,6 +70,29 @@ Session age = max(newest file mtime, metadata lastActivityAt). A capped
 directory walk can miss the one hot file and report a working session as a
 day old. Two independent signals, take the fresher.
 
+
+
+UPGRADE 7 — filters and search ("only what I care about")
+
+- The summary-strip chips are BUTTONS: clicking toggles that state's
+  visibility, choices persist in localStorage, and a chip dims when off.
+- CLI runs get their own chip, and it is the SOLE gate for CLI cards — an
+  idle CLI run must still show when the CLI chip is on. (Users click "CLI"
+  to SEE CLI runs, not to intersect them with the state filters. We shipped
+  the intersect version first; it reads as "the chip says 2 but the page
+  shows nothing." Don't repeat that.)
+- A live search box next to the chips, filtering on title, doing lines, and
+  subagent roles. Keep the input OUTSIDE the re-rendered strip or every
+  refresh steals its focus. Empty result renders "nothing matches — show
+  everything" with a one-click reset.
+- Make the chip/search bar position:sticky with backdrop blur, add card
+  hover states, and you're done: the page reads like a product, not a log.
+
+STANDING RULE — fail pretty: any auxiliary probe that breaks (a budget
+check, a log tail) renders as one short warning WITH THE FIX COMMAND
+("run: claude login"), never a raw error dump. A dashboard that yells
+stack traces trains you to stop reading it.
+
 VERIFY (show me, don't tell me):
 - Run the generator; paste one session's JSON showing role, tok, runtime_s,
   and a spark array with at least one nonzero bucket.
