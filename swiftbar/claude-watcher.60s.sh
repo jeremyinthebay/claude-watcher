@@ -29,6 +29,12 @@ except Exception:
 def clean(t):
     return " ".join(str(t).replace("|", "/").split())
 
+def dur2(s):
+    if s is None: return "?"
+    if s < 90: return str(s) + "s"
+    if s < 5400: return str(s // 60) + "m"
+    return str(s // 3600) + "h"
+
 def ago(s):
     if s < 90: return f"{s}s"
     if s < 5400: return f"{s//60}m"
@@ -69,7 +75,16 @@ for s in ss:
     model = s.get("model", "").replace("claude-", "")
     t = clean(s.get("title", "?"))
     a = ago(s.get("age_s", 0))
-    print(f"{dot} {t} — {a} · {model}{sub} | href={PAGE}")
+    km = "⌨ " if s.get("kind") == "cli" else ""
+    cs = s.get("created_s")
+    up = " · up " + dur2(cs) if cs else ""
+    print(f"{dot} {km}{t} — {a} · {model}{sub}{up} | href={PAGE}")
+    sp = s.get("spark") or []
+    mx = max(sp) if sp else 0
+    if mx:
+        blocks = "▁▂▃▄▅▆▇█"
+        line = "".join(blocks[min(7, int(v * 7 / mx))] if v else "·" for v in sp)
+        print(f"--activity  {line}  (last hour, 5-min buckets) | size=11")
     dg = clean(s.get("doing") or "")[:120]
     if dg:
         print(f"--{dg} | size=11")
@@ -91,6 +106,10 @@ if ll:
     print(f"--{ll} | size=11")
 ul = clean(d.get("usage_last") or "")[:120]
 if ul:
-    print(f"--budget: {ul} | size=11")
+    low = ul.lower()
+    if ("error" in low) or ("expired" in low) or ("no-oauth" in low):
+        print("--⚠ budget probe failing — fix: run claude login on the mini | color=red size=11")
+    else:
+        print(f"--budget: {ul} | size=11")
 print(f"Open Claude Watcher | href={PAGE}")
 '

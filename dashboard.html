@@ -150,10 +150,11 @@ function render(){
     tg("idle","var(--off)","idle",n.idle)+
     tg("cli","","CLI",n.cli)+
     '<span class="chip '+(paused?'paused':'')+'">'+(paused?'⏸ relay paused':'▶ relay autonomous')+'</span>'+
-    (genAge>300?'<span class="chip dead">⚠ feed '+dur(genAge)+' stale</span>':'');
+    (genAge>300?'<span class="chip dead">⚠ feed '+dur(genAge)+' stale</span>':'')+
+    (/ERROR|expired|no-oauth/i.test(d.usage_last||'')?'<span class="chip dead" title="run: claude login">⚠ budget probe</span>':'');
   var vis=ss.filter(function(s){
-    if(!F[s.state])return false;
-    if(s.kind=='cli'&&!F.cli)return false;
+    if(s.kind=='cli'){if(!F.cli)return false}
+    else if(!F[s.state])return false;
     if(Q){var hay=(s.title+" "+(s.doing||"")+" "+(s.model||"")).toLowerCase();
       var subs=(s.subagent_list||[]).map(function(a){return (a.role||"")+" "+(a.doing||"")}).join(" ").toLowerCase();
       if(hay.indexOf(Q)<0&&subs.indexOf(Q)<0)return false}
@@ -166,7 +167,10 @@ function render(){
     '<div class="row"><span class="chip '+(paused?'paused':'')+'">'+(paused?'PAUSED'+(rl.halt?' (.halt)':' (.stop)'):'AUTONOMOUS')+'</span>'+
     '<span class="meta">log '+(rl.log_age_s==null?"—":ago(rl.log_age_s))+'</span></div>'+
     '<div style="margin-top:8px"><code>'+esc(rl.log_last||"")+'</code></div>';
-  document.getElementById("usage").textContent=d.usage_last||"—";
+  var ul=d.usage_last||"—", bad=/ERROR|expired|no-oauth/i.test(ul);
+  document.getElementById("usage").innerHTML=bad
+    ?'<span style="color:var(--red)">⚠ probe failing — Claude Code\'s OAuth token was cleared. Fix: run <b>claude login</b> on this Mac.</span><br><span style="color:var(--faint)" title="'+esc(ul).replace(/"/g,"&quot;")+'">'+esc(ul.slice(0,110))+'…</span>'
+    :esc(ul);
   document.getElementById("stamp").textContent="Generated "+ago(genAge)+" · regenerates every 60s";
 }
 document.getElementById("strip").addEventListener("click",function(e){
@@ -178,7 +182,7 @@ async function load(){
   try{
     var r=await fetch("status.json?cb="+Date.now());DATA=await r.json();render();
   }catch(e){
-    if(INLINE){render()}  // file:// mode: data is inlined; meta-refresh below reloads it
+    if(INLINE){render()}
     else document.getElementById("stamp").textContent="status.json unreachable — generator may be off";
   }
 }
