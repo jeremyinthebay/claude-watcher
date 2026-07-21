@@ -7,8 +7,23 @@ operates, not what the watcher is; adopt it separately.
 Paste this into a Claude (Cowork / Claude Code) session:
 
 ```
-Build me the complete Claude Watcher in THREE PHASES, in order. The phase
-specs are canonical — fetch each one and execute it exactly:
+Build me the complete Claude Watcher in THREE PHASES, in order.
+
+PHASE 0 — THE ENVIRONMENT GATE (do this before fetching anything):
+Run `uname -s` and `ls "$HOME/Library/Application Support/Claude"` with your
+shell tool. You must see `Darwin` and that directory must exist. If you see
+Linux, or /Users doesn't exist, you are in a sandboxed VM — NOT my Mac — and
+nothing below can be built or verified from where you are. STOP IMMEDIATELY
+and tell me my options:
+  a) paste this same prompt into Claude Code in Terminal on the Mac (runs
+     natively — the easiest path), or
+  b) give this Cowork session real shell access to the Mac via a host-shell
+     MCP (e.g. Desktop Commander), then re-run, or
+  c) skip the prompts: git clone the repo and run ./install.sh in Terminal.
+Do not build the files "for later" from inside the sandbox — an unverifiable
+artifact violates the gate rule below.
+
+The phase specs are canonical — fetch each one and execute it exactly:
 
   Phase 1: https://raw.githubusercontent.com/jeremyinthebay/claude-watcher/main/prompts/level1-local-dashboard.md
   Phase 2: https://raw.githubusercontent.com/jeremyinthebay/claude-watcher/main/prompts/level2-menubar-and-doing.md

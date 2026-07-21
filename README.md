@@ -36,6 +36,14 @@ Covers **Cowork** (Claude desktop agent) sessions *and* **Claude Code CLI** runs
 (`~/.claude/projects`). Cloud sessions (`session_…` IDs) are invisible by design — they run in
 Anthropic's sandbox and leave no tracks on your disk.
 
+## Requirements
+
+A Mac, and a shell that actually runs on it. `install.sh` in Terminal always works.
+If you use the **prompts** instead: run them in **Claude Code** (native), or in a
+Cowork session that has real host shell access (e.g. a Desktop Commander-style MCP).
+**Cowork's default sandbox is a Linux VM** — it cannot see `~/Library`, `launchctl`,
+or your session tree, and the build prompts will (correctly) refuse to proceed there.
+
 ## Install (two commands)
 
 ```sh
