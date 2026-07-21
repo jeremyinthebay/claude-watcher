@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Claude Watcher</title><!-- github.com/jeremyinthebay/claude-watcher -->
+<meta name="description" content="Live view of every Claude session on the mini — who's actually working, who's idle, and what each agent is doing.">
+<style>
+:root{--bg:#14181d;--card:#1c222a;--card2:#161c23;--ink:#e9edf2;--mut:#9aa7b4;--faint:#5c6670;
+  --acc:#e0b24a;--line:#2b333d;--ok:#4cc38a;--warn:#e0b24a;--off:#5c6670;--red:#e5484d;
+  --mono:ui-monospace,SFMono-Regular,Menlo,monospace}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+.wrap{max-width:860px;margin:0 auto;padding:32px 18px 60px}
+h1{font-size:24px;margin:0}
+.sub{color:var(--mut);font-size:13px;margin:6px 0 14px}
+/* topbar: sticky chips + search */
+.topbar{position:sticky;top:0;z-index:5;display:flex;gap:10px;align-items:center;flex-wrap:wrap;
+  background:rgba(20,24,29,.88);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+  padding:10px 0;margin:0 0 10px}
+.search{margin-left:auto;background:var(--card2);border:1px solid var(--line);border-radius:999px;
+  color:var(--ink);font:13px inherit;padding:5px 14px;width:170px;outline:none}
+.search:focus{border-color:var(--acc)}
+.chip.tog{cursor:pointer;user-select:none;transition:opacity .12s,border-color .12s}
+.chip.tog:hover{border-color:var(--acc)}
+.chip.tog.off{opacity:.35}
+.card{transition:border-color .15s}
+.card:hover{border-color:#3a4550}
+.empty{color:var(--faint);font-size:14px}
+.empty a{color:var(--acc);cursor:pointer}
+/* summary strip */
+.strip{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.chip{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;border:1px solid var(--line);
+  border-radius:999px;padding:3px 12px;color:var(--mut);background:var(--card2)}
+.chip b{color:var(--ink);font-weight:600}
+.chip .d{width:8px;height:8px;border-radius:50%}
+.chip.paused{color:var(--warn);border-color:rgba(224,178,74,.4)}
+.chip.dead{color:var(--red);border-color:rgba(229,72,77,.5)}
+/* session cards */
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin:10px 0}
+.row{display:flex;align-items:baseline;gap:10px}
+.dot{width:10px;height:10px;border-radius:50%;flex:0 0 10px;align-self:center}
+.working>.row .dot{background:var(--ok);box-shadow:0 0 8px var(--ok)}
+.quiet>.row .dot{background:var(--warn)}
+.idle>.row .dot{background:var(--off)}
+.t{font-weight:600;font-size:15.5px}
+.badge{font-size:11px;color:#1a1204;background:var(--acc);border-radius:999px;padding:1px 8px;font-weight:700;white-space:nowrap}
+.mchip{font-size:11px;color:var(--mut);border:1px solid var(--line);border-radius:999px;padding:1px 8px;white-space:nowrap}
+.meta{color:var(--faint);font-size:12px;margin-left:auto;text-align:right;white-space:nowrap}
+.meta b{color:var(--mut);font-weight:600}
+.doing{display:flex;gap:8px;align-items:center;margin:8px 0 0 20px;color:var(--mut);font-size:12.5px;min-width:0}
+.doing .ico{flex:0 0 auto}
+.doing code{font:12px var(--mono);color:#c6d2df;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* subagent rows */
+.subs{margin:10px 0 2px 20px;border-left:2px solid var(--line);padding-left:12px}
+.sa{display:flex;align-items:center;gap:8px;padding:4px 0;min-width:0}
+.sa .sd{width:7px;height:7px;border-radius:50%;flex:0 0 7px}
+.sa.on .sd{background:var(--ok)}
+.sa.off .sd{background:var(--off)}
+.role{font-size:11px;font-weight:700;letter-spacing:.02em;color:var(--acc);border:1px solid rgba(224,178,74,.35);
+  border-radius:6px;padding:1px 7px;white-space:nowrap;flex:0 0 auto}
+.sa.off .role{color:var(--mut);border-color:var(--line)}
+.sa code{flex:1;font:12px var(--mono);color:#b7c3d0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.sa.off code{color:var(--faint)}
+.rt{font-size:11.5px;color:var(--mut);font-variant-numeric:tabular-nums;white-space:nowrap;flex:0 0 auto}
+details.done{margin:4px 0 0 20px}
+details.done summary{cursor:pointer;color:var(--faint);font-size:12px;list-style:none;padding:2px 0}
+details.done summary::before{content:"▸ ";color:var(--faint)}
+details.done[open] summary::before{content:"▾ "}
+details.done .subs{margin-left:0}
+h2{font-size:14px;color:var(--mut);margin:26px 0 6px;text-transform:uppercase;letter-spacing:.06em}
+code{font:12px var(--mono);color:#d7e2ee;word-break:break-all}
+.mchip.cli{color:var(--acc);border-color:rgba(224,178,74,.35);font-weight:700}
+.spark{display:flex;gap:2px;align-items:flex-end;height:16px;margin:8px 0 0 20px}
+.spark i{display:block;width:8px;background:var(--ok);opacity:.75;border-radius:1px}
+.sid{font:10.5px var(--mono)}
+.stamp{color:var(--faint);font-size:12px;margin-top:18px}
+@media(max-width:600px){
+  .row{flex-wrap:wrap}
+  .meta{margin-left:auto;white-space:normal;text-align:right}
+  .sid{display:none}
+  .sa .rt{display:none}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>Claude Watcher</h1>
+<p class="sub">Observed from outside — file writes and transcript tails, never self-reporting. Local sessions only
+(cloud <code>session_</code> IDs leave no tracks here). Auto-refreshes every 30s.</p>
+<div class="topbar"><div class="strip" id="strip"></div><input id="q" class="search" type="search" placeholder="filter sessions…" autocomplete="off"></div>
+<div id="sessions"></div>
+<h2>Relay</h2>
+<div class="card" id="relay"></div>
+<h2>Last budget probe</h2>
+<div class="card"><code id="usage"></code></div>
+<p class="stamp" id="stamp"></p>
+</div>
+<script>
+var INLINE=null;
+var DATA=INLINE,Q="";
+var F;try{F=JSON.parse(localStorage.getItem("wf"))||null}catch(e){F=null}
+if(!F||F.working===undefined)F={working:true,quiet:true,idle:true,cli:true};
+function save(){try{localStorage.setItem("wf",JSON.stringify(F))}catch(e){}}
+function ago(s){if(s==null)return "—";if(s<90)return s+"s ago";if(s<5400)return Math.round(s/60)+"m ago";if(s<172800)return Math.round(s/3600)+"h ago";return Math.round(s/86400)+"d ago"}
+function dur(s){return s==null?"?":(s<90?s+"s":s<5400?Math.round(s/60)+"m":Math.round(s/3600)+"h")}
+function tok(t){return !t?"":t<1000?t+" tok":(t/1000).toFixed(1)+"k tok"}
+function esc(t){return String(t||"").replace(/&/g,"&amp;").replace(/</g,"&lt;")}
+function act(t){t=String(t||"");var tool=/^[A-Za-z0-9_]+:|^[A-Za-z0-9_]+ /.test(t)&&/mcp__|^[A-Z][a-zA-Z]+:/.test(t);
+  t=t.replace(/^mcp__/,"").replace(/__/g," · ");return {ico:tool?"🔧":"💬",text:t}}
+function saRow(a){
+  var d=act(a.doing||a.task), role=a.role||"agent";
+  var full=esc((a.task||"")+(a.doing?"  →  "+a.doing:""));
+  return '<div class="sa '+(a.active?'on':'off')+'"><span class="sd"></span>'+
+    '<span class="role">'+esc(role)+'</span>'+
+    '<code title="'+full.replace(/"/g,"&quot;")+'">'+esc(d.text)+'</code>'+
+    '<span class="rt">'+(a.active?dur(a.runtime_s)+' ⏱':'done · '+dur(a.runtime_s))+(a.tok?' · '+tok(a.tok):'')+'</span></div>';
+}
+function card(s){
+  var subs=s.subagent_list||[], on=subs.filter(function(a){return a.active}), off=subs.filter(function(a){return !a.active});
+  var dg=s.doing?act(s.doing):null;
+  var spark=(function(){var sp=s.spark||[];var mx=Math.max.apply(null,sp.concat([0]));if(!mx)return '';
+    return '<div class="spark" title="events per 5 min, last hour">'+sp.map(function(v){return '<i style="height:'+Math.max(2,Math.round(v/mx*16))+'px'+(v?'':';opacity:.25')+'"></i>'}).join("")+'</div>';})();
+  return '<div class="card '+s.state+'"><div class="row"><div class="dot"></div>'+
+    '<span class="t">'+esc(s.title)+'</span>'+
+    (on.length?'<span class="badge">'+on.length+' subagent'+(on.length>1?'s':'')+'</span>':'')+
+    (s.kind=='cli'?'<span class="mchip cli">CLI</span>':'')+
+    '<span class="mchip">'+esc((s.model||"").replace("claude-",""))+'</span>'+
+    '<span class="meta"><b>'+ago(s.age_s)+'</b>'+(s.created_s?' · up '+dur(s.created_s):'')+'<br><span class="sid">'+esc(s.id)+'</span></span></div>'+
+    (dg?'<div class="doing"><span class="ico">'+dg.ico+'</span><code>'+esc(dg.text)+'</code></div>':'')+spark+
+    (on.length?'<div class="subs">'+on.map(saRow).join("")+'</div>':'')+
+    (off.length?'<details class="done"><summary>'+off.length+' finished in the last 30 min</summary><div class="subs">'+off.map(saRow).join("")+'</div></details>':'')+
+    '</div>';
+}
+function render(){
+  if(!DATA)return;
+  var d=DATA, ss=d.sessions||[];
+  var n={working:0,quiet:0,idle:0,cli:0};
+  ss.forEach(function(s){n[s.state]++;if(s.kind=='cli')n.cli++});
+  var rl=d.relay||{}, paused=rl.paused_stop||rl.halt;
+  var genAge=Math.round(Date.now()/1000-d.generated_at);
+  function tg(f,dotColor,label,count){
+    return '<span class="chip tog '+(F[f]?'':'off')+'" data-f="'+f+'">'+
+      (dotColor?'<span class="d" style="background:'+dotColor+'"></span>':'')+'<b>'+count+'</b> '+label+'</span>';
+  }
+  document.getElementById("strip").innerHTML=
+    tg("working","var(--ok)","working",n.working)+
+    tg("quiet","var(--warn)","quiet",n.quiet)+
+    tg("idle","var(--off)","idle",n.idle)+
+    tg("cli","","CLI",n.cli)+
+    '<span class="chip '+(paused?'paused':'')+'">'+(paused?'⏸ relay paused':'▶ relay autonomous')+'</span>'+
+    (genAge>300?'<span class="chip dead">⚠ feed '+dur(genAge)+' stale</span>':'');
+  var vis=ss.filter(function(s){
+    if(!F[s.state])return false;
+    if(s.kind=='cli'&&!F.cli)return false;
+    if(Q){var hay=(s.title+" "+(s.doing||"")+" "+(s.model||"")).toLowerCase();
+      var subs=(s.subagent_list||[]).map(function(a){return (a.role||"")+" "+(a.doing||"")}).join(" ").toLowerCase();
+      if(hay.indexOf(Q)<0&&subs.indexOf(Q)<0)return false}
+    return true});
+  document.getElementById("sessions").innerHTML=vis.map(card).join("")||
+    '<div class="card empty">Nothing matches — <a id="reset">show everything</a></div>';
+  var r=document.getElementById("reset");
+  if(r)r.addEventListener("click",function(){F={working:true,quiet:true,idle:true,cli:true};Q="";document.getElementById("q").value="";save();render()});
+  document.getElementById("relay").innerHTML=
+    '<div class="row"><span class="chip '+(paused?'paused':'')+'">'+(paused?'PAUSED'+(rl.halt?' (.halt)':' (.stop)'):'AUTONOMOUS')+'</span>'+
+    '<span class="meta">log '+(rl.log_age_s==null?"—":ago(rl.log_age_s))+'</span></div>'+
+    '<div style="margin-top:8px"><code>'+esc(rl.log_last||"")+'</code></div>';
+  document.getElementById("usage").textContent=d.usage_last||"—";
+  document.getElementById("stamp").textContent="Generated "+ago(genAge)+" · regenerates every 60s";
+}
+document.getElementById("strip").addEventListener("click",function(e){
+  var c=e.target.closest(".tog");if(!c)return;
+  var f=c.getAttribute("data-f");F[f]=!F[f];save();render();
+});
+document.getElementById("q").addEventListener("input",function(e){Q=e.target.value.trim().toLowerCase();render()});
+async function load(){
+  try{
+    var r=await fetch("status.json?cb="+Date.now());DATA=await r.json();render();
+  }catch(e){
+    if(INLINE){render()}  // file:// mode: data is inlined; meta-refresh below reloads it
+    else document.getElementById("stamp").textContent="status.json unreachable — generator may be off";
+  }
+}
+if(INLINE){render()}
+load();setInterval(load,30000);
+if(INLINE&&location.protocol==="file:"){setTimeout(function(){location.reload()},60000)}
+</script>
+</body>
+</html>
