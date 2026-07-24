@@ -335,7 +335,20 @@ def _ccusage_daily():
             return json.load(open(cache))
     except Exception:
         pass
-    env = {**os.environ, "PATH": "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin"}
+    # Count Claude Code CLI/relay usage (global ~/.claude) AND desktop/agent
+    # sessions (each keeps its own nested .claude/projects). ccusage takes a
+    # comma-separated CLAUDE_CONFIG_DIR; cap + sort-by-recency bounds the env size.
+    import glob
+    cfg = [os.path.expanduser("~/.claude")]
+    try:
+        base = os.path.expanduser("~/Library/Application Support/Claude/local-agent-mode-sessions")
+        cw = [os.path.dirname(p) for p in glob.glob(os.path.join(base, "*/*/*/.claude/projects"))]
+        cw.sort(key=lambda p: os.path.getmtime(p), reverse=True)
+        cfg += cw[:2000]
+    except Exception:
+        pass
+    env = {**os.environ, "PATH": "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin",
+           "CLAUDE_CONFIG_DIR": ",".join(cfg)}
     cmds = [["/opt/homebrew/bin/ccusage", "daily", "--since", "20250101", "--json"],
             ["ccusage", "daily", "--since", "20250101", "--json"],
             ["npx", "-y", "ccusage@latest", "daily", "--since", "20250101", "--json"]]
