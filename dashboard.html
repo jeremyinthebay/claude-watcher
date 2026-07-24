@@ -105,7 +105,7 @@ code{font:12px var(--mono);color:#d7e2ee;word-break:break-all}
 .hdelta.down{color:var(--ok)}
 .hdelta.flat{color:var(--faint)}
 .hdelta .hvs{color:var(--faint)}
-.hcost{position:absolute;top:9px;right:11px;font:11px var(--mono);color:var(--acc);
+.hcost{display:inline-block;margin-top:5px;font:11px var(--mono);color:var(--acc);
   background:rgba(224,178,74,.1);border:1px solid rgba(224,178,74,.28);border-radius:999px;padding:2px 8px;
   font-variant-numeric:tabular-nums}
 .bgrid{display:grid;grid-template-columns:3fr 2fr;gap:10px;margin-top:10px}
@@ -1177,18 +1177,29 @@ if(DATA)renderBudget();
   audio.addEventListener('ended', function () { setPlaying(false); party(false); });
   audio.addEventListener('error', function () { var r = document.getElementById('tdfwRow'); if (r) r.style.display = 'none'; });
 
-  function mount() {
-    var row = document.getElementById('tdfwRow');
-    if (row && row.isConnected) return;
+  function tierNow() {
+    var m = /[?&]heat=([0-3])(?:&|$)/.exec(location.search);
+    if (m) return +m[1];
+    try { var h = window.DATA && window.DATA.budget && window.DATA.budget.heat;
+      return (h && typeof h.tier === 'number') ? h.tier : 0; } catch (e) { return 0; }
+  }
+  function build() {
     var budget = document.getElementById('budget');
     if (!budget) return;
-    row = document.createElement('div'); row.id = 'tdfwRow'; row.className = 'tdfw-row';
+    var row = document.createElement('div'); row.id = 'tdfwRow'; row.className = 'tdfw-row';
     row.appendChild(btn);
     var anchor = document.getElementById('bwarn') || document.getElementById('heroes');
     if (anchor) budget.insertBefore(row, anchor); else budget.appendChild(row);
   }
-  mount();
-  setInterval(mount, 2500);   // re-seat if a repaint ever removes it
+  function update() {
+    // only surface the button at full blaze (tier 3) — or keep it while the track is playing
+    var show = tierNow() >= 3 || (audio && !audio.paused);
+    var row = document.getElementById('tdfwRow');
+    if (show) { if (!row || !row.isConnected) build(); }
+    else if (row) { row.remove(); }
+  }
+  update();
+  setInterval(update, 1500);   // re-check visibility + re-seat if a repaint removed it
 })();
 </script>
 
