@@ -1,0 +1,71 @@
+<style id="tdfw-css">
+.tdfw-row{ margin:2px 0 12px; }
+.tdfw-btn{
+  cursor:pointer; pointer-events:auto; -webkit-appearance:none; appearance:none;
+  font:700 12.5px/1 system-ui,-apple-system,"Segoe UI",sans-serif; letter-spacing:.02em;
+  color:#1a1204; background:linear-gradient(180deg,#ffd76a,#ff9a3d);
+  border:1px solid rgba(255,180,90,.6); border-radius:999px;
+  padding:8px 15px; white-space:normal; text-align:center; max-width:100%;
+  animation:tdfw-invite 2.6s ease-in-out infinite; transition:transform .1s,filter .1s;
+}
+.tdfw-btn:hover{ filter:brightness(1.07); }
+.tdfw-btn:active{ transform:translateY(1px); }
+@keyframes tdfw-invite{ 0%,100%{ box-shadow:0 0 0 rgba(255,138,61,0);} 50%{ box-shadow:0 0 15px rgba(255,138,61,.55);} }
+.tdfw-btn.playing{
+  color:#fff; background:linear-gradient(180deg,#e5484d,#c9302c);
+  border-color:rgba(255,120,90,.7); animation:tdfw-throb .5s ease-in-out infinite;
+}
+@keyframes tdfw-throb{ 0%,100%{ transform:scale(1);} 50%{ transform:scale(1.045);} }
+@media (prefers-reduced-motion: reduce){ .tdfw-btn, .tdfw-btn.playing{ animation:none; } }
+</style>
+<audio id="tdfwAudio" preload="none" loop></audio>
+<script id="tdfw-js">
+(function () {
+  'use strict';
+  if (window.__tdfwInstalled) return;
+  window.__tdfwInstalled = true;
+
+  var SRC = 'turndownforwhat.mp3';   // served next to this page; supply your own to reuse
+  var LABEL = '🔊 Token Maxxxxxing! Turn Down for What!?';
+
+  // plain <audio> (NOT Web Audio): iOS treats media elements as "media" so they
+  // play on the silent switch, and a real click gesture always unblocks playback.
+  var audio = document.getElementById('tdfwAudio');
+  if (!audio) { audio = document.createElement('audio'); audio.id = 'tdfwAudio'; document.body.appendChild(audio); }
+  audio.preload = 'none'; audio.loop = true;
+  if (!audio.getAttribute('src')) audio.src = SRC;
+
+  var btn = document.createElement('button');
+  btn.type = 'button'; btn.id = 'tdfwBtn'; btn.className = 'tdfw-btn'; btn.textContent = LABEL;
+
+  function party(on) {
+    window.__heatForce = on ? 3 : null;          // unleash / release the full flame-and-money show
+    if (window.renderHeat) { try { window.renderHeat(); } catch (e) {} }
+  }
+  function setPlaying(on) {
+    btn.classList.toggle('playing', on);
+    btn.textContent = on ? '⏸ Turn Down for What!? (blasting)' : LABEL;
+  }
+  btn.addEventListener('click', function () {
+    if (audio.paused) { audio.play().catch(function () {}); }
+    else { audio.pause(); }
+  });
+  audio.addEventListener('play',  function () { setPlaying(true);  party(true);  });
+  audio.addEventListener('pause', function () { setPlaying(false); party(false); });
+  audio.addEventListener('ended', function () { setPlaying(false); party(false); });
+  audio.addEventListener('error', function () { var r = document.getElementById('tdfwRow'); if (r) r.style.display = 'none'; });
+
+  function mount() {
+    var row = document.getElementById('tdfwRow');
+    if (row && row.isConnected) return;
+    var budget = document.getElementById('budget');
+    if (!budget) return;
+    row = document.createElement('div'); row.id = 'tdfwRow'; row.className = 'tdfw-row';
+    row.appendChild(btn);
+    var anchor = document.getElementById('bwarn') || document.getElementById('heroes');
+    if (anchor) budget.insertBefore(row, anchor); else budget.appendChild(row);
+  }
+  mount();
+  setInterval(mount, 2500);   // re-seat if a repaint ever removes it
+})();
+</script>

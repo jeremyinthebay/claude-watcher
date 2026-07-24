@@ -429,8 +429,31 @@ def budget_snapshot():
     except Exception: pass
     try: upd = max(0, int(now - os.path.getmtime(os.path.join(CWDIR, "ccusage-cache.json"))))
     except Exception: upd = None
+    # hot-streak "heat" — escalating levels drive the fun overlay
+    tdt = td["tok"]; ydt = yd["tok"]
+    lwd = (by.get(ds(today - datetime.timedelta(days=7))) or {}).get("tok", 0)
+    prior = {k: v["tok"] for k, v in by.items() if k < ds(today)}
+    prior_max = max(prior.values()) if prior else 0
+    prior_max_date = max(prior, key=prior.get) if prior else None
+    recent = [prior[k] for k in sorted(prior)][-14:]
+    recent_avg = (sum(recent) / len(recent)) if recent else 0
+    above_y = tdt > 0 and tdt > ydt
+    ahead_lw = tdt > 0 and tdt > lwd
+    is_rec = tdt > 0 and tdt > prior_max
+    big_spike = recent_avg > 0 and tdt > 2 * recent_avg
+    tier = 0
+    if above_y: tier = max(tier, 1)
+    if ahead_lw: tier = max(tier, 2)
+    if is_rec or big_spike: tier = 3
+    sig = ([ "above_yesterday" ] if above_y else []) + \
+          ([ "ahead_of_last_week" ] if ahead_lw else []) + \
+          ([ "big_spike" ] if big_spike else []) + ([ "record" ] if is_rec else [])
+    heat = {"tier": tier, "signals": sig, "today": int(tdt), "yesterday": int(ydt),
+            "last_week_day": int(lwd), "prior_max": int(prior_max),
+            "prior_max_date": prior_max_date, "recent_avg": int(recent_avg),
+            "pct_over_yday": (round((tdt - ydt) / ydt * 100, 1) if ydt else None)}
     return {"cards": cards, "sparkline": spark, "model_mix": model_mix,
-            "meters": meters, "updated_s": upd}
+            "meters": meters, "updated_s": upd, "heat": heat}
 
 try:
     budget = budget_snapshot()

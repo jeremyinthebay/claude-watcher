@@ -1,0 +1,634 @@
+<style id="heatfx-css">
+/* ============ HEATFX — hot streak celebration overlay ============ */
+/* Everything is prefixed heatfx-/hfx- to stay out of the page's way. */
+
+#heatfx{
+  position:fixed; inset:0; z-index:60;
+  pointer-events:none; overflow:hidden;
+  font-family:system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+#heatfx *{ pointer-events:none; }
+
+/* ---------- badge on the TODAY card ---------- */
+.heatfx-badge{
+  position:absolute; top:8px; right:10px; z-index:5;
+  pointer-events:none;
+  font:600 11px/1 system-ui,-apple-system,sans-serif;
+  letter-spacing:.04em; white-space:nowrap;
+  color:var(--acc,#e0b24a);
+  background:linear-gradient(180deg,rgba(255,138,61,.18),rgba(229,72,77,.12));
+  border:1px solid rgba(255,170,80,.45);
+  border-radius:999px; padding:5px 10px;
+  box-shadow:0 0 10px rgba(255,138,61,.28), inset 0 0 6px rgba(255,170,80,.14);
+  animation:heatfx-badgein .55s cubic-bezier(.2,1.5,.4,1) both,
+            heatfx-badgeglow 2.2s ease-in-out .55s infinite alternate;
+}
+@keyframes heatfx-badgein{
+  from{ transform:translateY(-8px) scale(.6); opacity:0; }
+  to  { transform:translateY(0) scale(1);     opacity:1; }
+}
+@keyframes heatfx-badgeglow{
+  from{ box-shadow:0 0 6px rgba(255,138,61,.20), inset 0 0 6px rgba(255,170,80,.10); }
+  to  { box-shadow:0 0 16px rgba(255,138,61,.55), inset 0 0 8px rgba(255,170,80,.22); }
+}
+
+/* ---------- warm flicker on the big numbers (tier >= 2) ---------- */
+.heatfx-glowed .hero{
+  animation:heatfx-glowanim 2.6s ease-in-out infinite alternate;
+}
+@keyframes heatfx-glowanim{
+  from{ text-shadow:0 0 4px rgba(224,178,74,.16); }
+  55% { text-shadow:0 0 10px rgba(255,160,70,.34), 0 0 22px rgba(229,72,77,.12); }
+  to  { text-shadow:0 0 16px rgba(255,150,60,.50), 0 0 36px rgba(229,72,77,.22); }
+}
+
+/* ---------- embers ---------- */
+.heatfx-emberfield{ position:fixed; pointer-events:none; }
+.heatfx-ember{
+  position:absolute; bottom:0; left:var(--x);
+  width:var(--s); height:var(--s); border-radius:50%;
+  background:radial-gradient(circle, #ffe9a8 0%, var(--acc,#e0b24a) 35%, #ff8a3d 62%, transparent 72%);
+  box-shadow:0 0 8px 2px rgba(255,138,61,.55);
+  filter:blur(.4px); mix-blend-mode:screen;
+  opacity:0; will-change:transform,opacity;
+  animation:heatfx-rise var(--dur) linear var(--delay) infinite;
+}
+@keyframes heatfx-rise{
+  0%  { transform:translate(0,0) scale(1);        opacity:0; }
+  12% { opacity:.95; }
+  75% { opacity:.45; }
+  100%{ transform:translate(var(--sway), calc(-1 * var(--h))) scale(.5); opacity:0; }
+}
+
+/* ---------- the mascot ---------- */
+.heatfx-mascot{
+  position:fixed; left:0; top:80px;
+  width:122px; height:134px;
+  filter:drop-shadow(0 6px 14px rgba(255,110,40,.35));
+  will-change:transform;
+}
+.heatfx-mascot--blazing{
+  left:50%; top:5%;
+  width:184px; height:202px;
+  transform:translateX(-50%);
+  filter:drop-shadow(0 8px 24px rgba(255,110,40,.55));
+}
+.heatfx-ride  { animation:heatfx-ridein 3s cubic-bezier(.22,.9,.32,1) both; }
+.heatfx-parked{ transform:translateX(72vw); }
+@keyframes heatfx-ridein{
+  from{ transform:translateX(-160px); }
+  to  { transform:translateX(72vw); }
+}
+.heatfx-bob{ width:100%; height:100%; animation:heatfx-bob 2.3s ease-in-out infinite alternate; }
+@keyframes heatfx-bob{
+  from{ transform:translateY(0) rotate(-1.5deg); }
+  to  { transform:translateY(-8px) rotate(1.5deg); }
+}
+.heatfx-mascot--blazing .heatfx-bob{ animation:heatfx-bob3 1s ease-in-out infinite alternate; }
+@keyframes heatfx-bob3{
+  from{ transform:translateY(0) rotate(-4deg) scale(1); }
+  to  { transform:translateY(-16px) rotate(4deg) scale(1.03); }
+}
+/* SVG innards */
+.hfx-wave{ transform-origin:110px 236px; animation:heatfx-flick .8s ease-in-out infinite alternate; }
+.hfx-headflame{ transform-origin:110px 58px; animation:heatfx-flick .42s ease-in-out infinite alternate; }
+@keyframes heatfx-flick{
+  from{ transform:scaleY(1); }
+  to  { transform:scaleY(1.15) translateY(-2px); }
+}
+.hfx-armL{ transform-origin:56px 130px;  animation:heatfx-armL 1.4s ease-in-out infinite alternate; }
+.hfx-armR{ transform-origin:164px 130px; animation:heatfx-armR 1.25s ease-in-out .2s infinite alternate; }
+@keyframes heatfx-armL{ from{ transform:rotate(-9deg);} to{ transform:rotate(7deg);} }
+@keyframes heatfx-armR{ from{ transform:rotate(9deg);}  to{ transform:rotate(-7deg);} }
+.hfx-pL{ animation:heatfx-wob 1.1s ease-in-out infinite; }
+.hfx-pR{ animation:heatfx-wob 1.35s ease-in-out .25s infinite reverse; }
+@keyframes heatfx-wob{
+  0%  { transform:translate(0,0); }
+  25% { transform:translate(4px,-3px); }
+  50% { transform:translate(-4px,2px); }
+  75% { transform:translate(2px,4px); }
+  100%{ transform:translate(0,0); }
+}
+/* tier-3: eyes lose their minds */
+.heatfx-crazy .hfx-pL{ animation:heatfx-wob2 .30s linear infinite; }
+.heatfx-crazy .hfx-pR{ animation:heatfx-wob2 .37s linear .08s infinite reverse; }
+@keyframes heatfx-wob2{
+  0%  { transform:translate(0,0); }
+  20% { transform:translate(7px,-5px); }
+  40% { transform:translate(-7px,4px); }
+  60% { transform:translate(5px,6px); }
+  80% { transform:translate(-6px,-6px); }
+  100%{ transform:translate(0,0); }
+}
+
+/* ---------- money blast ---------- */
+.heatfx-hand{
+  position:fixed; bottom:-8px; font-size:46px; line-height:1;
+  transform:translate(-50%,0);
+  filter:drop-shadow(0 0 10px rgba(255,170,80,.4));
+  animation:heatfx-handpop .6s cubic-bezier(.2,1.5,.4,1) both,
+            heatfx-handshake 1.5s ease-in-out .6s infinite;
+}
+@keyframes heatfx-handpop{
+  from{ transform:translate(-50%,90px); }
+  to  { transform:translate(-50%,0); }
+}
+@keyframes heatfx-handshake{
+  0%,100%{ transform:translate(-50%,0) rotate(-4deg); }
+  50%    { transform:translate(-50%,-7px) rotate(4deg); }
+}
+.heatfx-bill{
+  position:fixed; bottom:64px; line-height:1;
+  transform:translate(-50%,0);
+  will-change:transform,opacity;
+  filter:drop-shadow(0 0 4px rgba(76,195,138,.35));
+  animation-name:heatfx-bill; animation-fill-mode:both; animation-timing-function:linear;
+}
+@keyframes heatfx-bill{
+  0%  { transform:translate(0,0) rotate(0deg) scale(.55); opacity:0;
+        animation-timing-function:cubic-bezier(.15,.65,.35,1); }
+  8%  { opacity:1; }
+  38% { transform:translate(calc(var(--dx) * .55), var(--peak)) rotate(var(--r1)) scale(1);
+        animation-timing-function:cubic-bezier(.55,.05,.85,.5); }
+  100%{ transform:translate(var(--dx), 46vh) rotate(var(--r2)) scale(1); opacity:.9; }
+}
+
+/* ---------- confetti ---------- */
+.heatfx-confetti{ position:fixed; left:50%; top:24%; }
+.heatfx-confetti i{
+  position:absolute; left:0; top:0; display:block;
+  will-change:transform,opacity;
+  animation-name:heatfx-conf; animation-fill-mode:both;
+  animation-timing-function:cubic-bezier(.15,.5,.4,1);
+}
+@keyframes heatfx-conf{
+  0%  { transform:translate(0,0) rotate(0deg); opacity:1; }
+  70% { opacity:1; }
+  100%{ transform:translate(var(--dx), var(--dy)) rotate(var(--r)); opacity:0; }
+}
+
+/* ---------- banner ---------- */
+.heatfx-banner{
+  position:fixed; left:50%; top:36%;
+  transform:translate(-50%,-50%);
+  text-align:center;
+  animation:heatfx-pop .7s cubic-bezier(.2,1.6,.4,1) both;
+}
+@keyframes heatfx-pop{
+  0%  { transform:translate(-50%,-50%) scale(.4); opacity:0; }
+  60% { transform:translate(-50%,-50%) scale(1.1); opacity:1; }
+  100%{ transform:translate(-50%,-50%) scale(1); opacity:1; }
+}
+.heatfx-banner-title{
+  font-weight:800; font-size:clamp(34px,6vw,64px); line-height:1.05;
+  letter-spacing:.04em; white-space:nowrap;
+  color:#ffd76a;
+  text-shadow:0 0 12px rgba(255,170,60,.9), 0 0 44px rgba(255,90,40,.55), 0 2px 0 #7a2a00;
+  animation:heatfx-breathe 2.4s ease-in-out infinite alternate;
+}
+@keyframes heatfx-breathe{
+  from{ transform:scale(1); }
+  to  { transform:scale(1.035); }
+}
+.heatfx-banner-sub{
+  margin-top:8px;
+  font-weight:600; font-size:clamp(14px,2vw,20px);
+  color:var(--mut,#9aa7b4);
+  text-shadow:0 0 10px rgba(255,138,61,.35);
+}
+.heatfx-static, .heatfx-static .heatfx-banner-title{ animation:none; }
+
+/* ---------- vignette pulse ---------- */
+.heatfx-vignette{
+  position:fixed; inset:0;
+  background:radial-gradient(ellipse at center,
+              transparent 55%,
+              rgba(229,72,77,.16) 82%,
+              rgba(255,96,46,.30) 100%);
+  animation:heatfx-vig 2.8s ease-in-out infinite alternate;
+}
+@keyframes heatfx-vig{ from{ opacity:.45; } to{ opacity:1; } }
+
+/* ---------- pause everything when tab hidden ---------- */
+.heatfx-paused #heatfx *,
+.heatfx-paused .heatfx-badge,
+.heatfx-paused .heatfx-glowed .hero{
+  animation-play-state:paused !important;
+}
+
+/* ---------- reduced motion: statics only, belt and suspenders ---------- */
+@media (prefers-reduced-motion: reduce){
+  #heatfx *, .heatfx-badge, .heatfx-glowed .hero{
+    animation:none !important; transition:none !important;
+  }
+}
+</style>
+<script id="heatfx-js">
+(function () {
+  'use strict';
+  if (window.__heatfxInstalled) return;
+  window.__heatfxInstalled = true;
+
+  var REDUCED = !!(window.matchMedia &&
+                   window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  var lastTier = -1;
+  var timers = [];
+  var state = { heroField: null, mascot: null, mascotTier: 0 };
+
+  function later(fn, ms) { var id = setTimeout(fn, ms); timers.push(id); return id; }
+  function clearTimers() { for (var i = 0; i < timers.length; i++) clearTimeout(timers[i]); timers.length = 0; }
+
+  /* ---------- data ---------- */
+  function heatData() {
+    try {
+      var b = window.DATA && window.DATA.budget;
+      if (!b || b.error || !b.heat) return {};
+      return b.heat;
+    } catch (e) { return {}; }
+  }
+  function effTier() {
+    // the "Token Maxxxxxing" music button forces the full party while it plays
+    if (typeof window.__heatForce === 'number') return Math.max(0, Math.min(3, window.__heatForce));
+    var m = /[?&]heat=([0-3])(?:&|$)/.exec(window.location.search);
+    if (m) return +m[1];
+    var t = heatData().tier;
+    if (typeof t !== 'number' || !isFinite(t)) return 0;
+    return Math.max(0, Math.min(3, Math.floor(t)));
+  }
+  function fmtTokens(n) {
+    if (typeof n !== 'number' || !isFinite(n)) return '';
+    if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M';
+    if (n >= 1e3) return (n / 1e3).toFixed(1) + 'k';
+    return String(Math.round(n));
+  }
+  function badgeText(tier) {
+    return tier >= 3 ? '🔥 record pace'
+         : tier === 2 ? '🔥 on a tear'
+         : '🔥 heating up';
+  }
+
+  /* ---------- DOM helpers ---------- */
+  function overlay() {
+    var el = document.getElementById('heatfx');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'heatfx';
+      document.body.appendChild(el);
+    }
+    return el;
+  }
+  function heroCard() { return document.querySelector('#heroes .hero:first-child'); }
+  function budgetTop() {
+    var b = document.getElementById('budget');
+    if (!b) return 90;
+    var r = b.getBoundingClientRect();
+    return Math.max(4, r.top);
+  }
+  function removeBadge() {
+    var b = document.getElementById('heatfx-badge');
+    if (b) b.remove();
+  }
+  function setBadge(text) {
+    removeBadge();
+    var hero = heroCard();
+    if (!hero) return;
+    if (getComputedStyle(hero).position === 'static') hero.style.position = 'relative';
+    var b = document.createElement('div');
+    b.id = 'heatfx-badge';
+    b.className = 'heatfx-badge';
+    b.textContent = text;
+    hero.appendChild(b);
+  }
+  function setGlow(on) {
+    var el = document.getElementById('heroes') || document.getElementById('budget');
+    if (el) el.classList.toggle('heatfx-glowed', !!on);
+  }
+
+  /* ---------- mascot: original fire-fuzz critter, "Singe" ---------- */
+  function spikyPath(cx, cy, rIn, rOut, spikes) {
+    var pts = spikes * 2, d = '';
+    for (var i = 0; i < pts; i++) {
+      var a = (Math.PI * 2 * i) / pts - Math.PI / 2;
+      // pseudo-random fuzz on the spike tips so the silhouette reads furry, not gear-like
+      var wob = 0.88 + 0.24 * (((i * 7) % 5) / 5);
+      var r = (i % 2) ? rIn : rOut * wob;
+      var x = cx + Math.cos(a) * r;
+      var y = cy + Math.sin(a) * r;
+      d += (i ? 'L' : 'M') + x.toFixed(1) + ',' + y.toFixed(1);
+    }
+    return d + 'Z';
+  }
+  function mascotSvg(blazing) {
+    var body = spikyPath(110, 118, 56, 76, 15);
+    var s = '';
+    s += '<svg viewBox="0 0 220 240" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;overflow:visible;display:block">';
+    s += '<defs>';
+    s += '<radialGradient id="hfxFur" cx="50%" cy="40%" r="68%">';
+    s += '<stop offset="0%" stop-color="#ffd76a"/><stop offset="45%" stop-color="#ff9a3d"/>';
+    s += '<stop offset="78%" stop-color="#f0602e"/><stop offset="100%" stop-color="#c93222"/>';
+    s += '</radialGradient>';
+    s += '<linearGradient id="hfxFlame" x1="0" y1="1" x2="0" y2="0">';
+    s += '<stop offset="0%" stop-color="#c9302c"/><stop offset="45%" stop-color="#ff7a2f"/>';
+    s += '<stop offset="100%" stop-color="#ffd76a"/>';
+    s += '</linearGradient>';
+    s += '<filter id="hfxFuzz" x="-20%" y="-20%" width="140%" height="140%">';
+    s += '<feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" seed="7" result="n"/>';
+    s += '<feDisplacementMap in="SourceGraphic" in2="n" scale="5"/>';
+    s += '</filter>';
+    s += '</defs>';
+    // the flame wave he surfs
+    s += '<g class="hfx-wave">';
+    s += '<path fill="url(#hfxFlame)" opacity=".95" d="M6,232 C26,196 40,222 58,200 C74,180 84,214 104,196 C122,180 136,214 154,198 C170,184 184,216 214,196 L214,238 L6,238 Z"/>';
+    s += '<path fill="#ffd76a" opacity=".75" d="M30,232 C46,210 58,226 74,212 C90,200 100,224 118,210 C134,198 148,224 166,212 C180,203 192,226 204,214 L204,238 L30,238 Z"/>';
+    s += '</g>';
+    // hair fully on fire at tier 3
+    if (blazing) {
+      s += '<g class="hfx-headflame" filter="url(#hfxFuzz)">';
+      s += '<path fill="url(#hfxFlame)" d="M78,54 C70,32 84,22 82,6 C96,18 96,36 92,50 Z"/>';
+      s += '<path fill="url(#hfxFlame)" d="M106,46 C100,22 116,14 112,-4 C130,12 128,34 120,48 Z"/>';
+      s += '<path fill="url(#hfxFlame)" d="M138,56 C134,36 148,30 146,14 C158,28 156,44 150,56 Z"/>';
+      s += '</g>';
+    }
+    // fuzzy ember body
+    s += '<path filter="url(#hfxFuzz)" fill="url(#hfxFur)" d="' + body + '"/>';
+    // little arms thrown up in delight
+    s += '<g class="hfx-armL">';
+    s += '<path d="M52,128 C34,112 26,92 30,70" stroke="#c93222" stroke-width="11" stroke-linecap="round" fill="none"/>';
+    s += '<circle cx="30" cy="66" r="10" fill="#ffb54d"/>';
+    s += '</g>';
+    s += '<g class="hfx-armR">';
+    s += '<path d="M168,128 C186,112 194,92 190,70" stroke="#c9322c" stroke-width="11" stroke-linecap="round" fill="none"/>';
+    s += '<circle cx="190" cy="66" r="10" fill="#ffb54d"/>';
+    s += '</g>';
+    // giant googly eyes
+    s += '<circle cx="84" cy="96" r="20" fill="#fff" stroke="#3a1206" stroke-width="2.5"/>';
+    s += '<circle cx="136" cy="96" r="20" fill="#fff" stroke="#3a1206" stroke-width="2.5"/>';
+    s += '<g class="hfx-pL"><circle cx="84" cy="98" r="8.5" fill="#16090a"/><circle cx="87" cy="95" r="2.5" fill="#fff" opacity=".85"/></g>';
+    s += '<g class="hfx-pR"><circle cx="136" cy="98" r="8.5" fill="#16090a"/><circle cx="139" cy="95" r="2.5" fill="#fff" opacity=".85"/></g>';
+    // wide open goofy grin + tongue
+    s += '<path fill="#4a1007" d="M66,130 Q110,192 154,130 Q110,150 66,130 Z"/>';
+    s += '<path fill="#ff6a55" d="M90,150 Q110,172 130,150 Q110,178 90,150 Z"/>';
+    s += '</svg>';
+    return s;
+  }
+  function addMascot(root, tier, ride) {
+    var w = document.createElement('div');
+    w.className = 'heatfx-mascot' + (tier === 3 ? ' heatfx-mascot--blazing heatfx-crazy' : '');
+    w.innerHTML = '<div class="heatfx-bob">' + mascotSvg(tier === 3) + '</div>';
+    if (tier === 2) {
+      w.classList.add(ride ? 'heatfx-ride' : 'heatfx-parked');
+    }
+    root.appendChild(w);
+    state.mascot = w;
+    state.mascotTier = tier;
+    positionMascot();
+  }
+  function positionMascot() {
+    if (!state.mascot || state.mascotTier !== 2) return;
+    state.mascot.style.top = Math.max(0, budgetTop() - 86) + 'px';
+  }
+
+  /* ---------- embers ---------- */
+  function emberField(count) {
+    var f = document.createElement('div');
+    f.className = 'heatfx-emberfield';
+    for (var i = 0; i < count; i++) {
+      var e = document.createElement('i');
+      e.className = 'heatfx-ember';
+      e.style.cssText =
+        '--x:' + (Math.random() * 100).toFixed(1) + '%;' +
+        '--s:' + (4 + Math.random() * 6).toFixed(1) + 'px;' +
+        '--dur:' + (2.6 + Math.random() * 2.4).toFixed(2) + 's;' +
+        '--delay:' + (Math.random() * 3).toFixed(2) + 's;' +
+        '--h:' + Math.round(90 + Math.random() * 90) + 'px;' +
+        '--sway:' + Math.round(Math.random() * 44 - 22) + 'px;';
+      f.appendChild(e);
+    }
+    return f;
+  }
+  function positionHeroField() {
+    var f = state.heroField;
+    if (!f) return;
+    var hero = heroCard();
+    if (hero) {
+      var r = hero.getBoundingClientRect();
+      f.style.left = r.left + 'px';
+      f.style.top = r.top + 'px';
+      f.style.width = r.width + 'px';
+      f.style.height = r.height + 'px';
+      f.style.bottom = 'auto';
+    } else {
+      f.style.left = '4vw'; f.style.width = '30vw';
+      f.style.top = 'auto'; f.style.bottom = '0'; f.style.height = '2px';
+    }
+  }
+
+  /* ---------- tier-3 one-shots ---------- */
+  function moneyBlast(root) {
+    var wrap = document.createElement('div');
+    wrap.className = 'heatfx-money';
+    root.appendChild(wrap);
+    var hands = [30, 66]; // % across the bottom
+    for (var hi = 0; hi < hands.length; hi++) {
+      var h = document.createElement('div');
+      h.className = 'heatfx-hand';
+      h.style.left = hands[hi] + '%';
+      h.style.animationDelay = (hi * 0.12) + 's, ' + (0.6 + hi * 0.12) + 's';
+      h.textContent = '🙌';
+      wrap.appendChild(h);
+    }
+    var BILLS = 22;
+    for (var i = 0; i < BILLS; i++) {
+      var b = document.createElement('span');
+      b.className = 'heatfx-bill';
+      b.textContent = (i % 3 === 0) ? '💸' : '💵';
+      var hx = hands[i % 2];
+      b.style.cssText =
+        'left:calc(' + hx + '% + ' + Math.round(Math.random() * 40 - 20) + 'px);' +
+        'font-size:' + Math.round(20 + Math.random() * 12) + 'px;' +
+        '--dx:' + Math.round(Math.random() * 520 - 260) + 'px;' +
+        '--peak:' + Math.round(-(28 + Math.random() * 30)) + 'vh;' +
+        '--r1:' + Math.round(Math.random() * 360 - 180) + 'deg;' +
+        '--r2:' + Math.round(Math.random() * 1000 - 500) + 'deg;' +
+        'animation-duration:' + (2.1 + Math.random() * 1.1).toFixed(2) + 's;' +
+        'animation-delay:' + (0.15 + Math.random() * 1.6).toFixed(2) + 's;';
+      b.addEventListener('animationend', function () { this.remove(); });
+      wrap.appendChild(b);
+    }
+    later(function () { // sweep any stragglers, keep the hands celebrating
+      var left = wrap.querySelectorAll('.heatfx-bill');
+      for (var j = 0; j < left.length; j++) left[j].remove();
+    }, 6000);
+  }
+  function confettiBurst(root) {
+    var c = document.createElement('div');
+    c.className = 'heatfx-confetti';
+    root.appendChild(c);
+    var colors = ['#ffd76a', '#ff8a3d', '#e5484d', '#4cc38a', '#e9edf2', '#f0602e'];
+    var N = 80;
+    for (var i = 0; i < N; i++) {
+      var p = document.createElement('i');
+      p.style.cssText =
+        'background:' + colors[i % colors.length] + ';' +
+        'width:' + Math.round(6 + Math.random() * 6) + 'px;' +
+        'height:' + Math.round(9 + Math.random() * 7) + 'px;' +
+        (Math.random() < 0.3 ? 'border-radius:50%;' : '') +
+        '--dx:' + (Math.random() * 76 - 38).toFixed(1) + 'vw;' +
+        '--dy:' + (30 + Math.random() * 45).toFixed(1) + 'vh;' +
+        '--r:' + Math.round(Math.random() * 1440 - 720) + 'deg;' +
+        'animation-duration:' + (1.5 + Math.random() * 1.4).toFixed(2) + 's;' +
+        'animation-delay:' + (Math.random() * 0.35).toFixed(2) + 's;';
+      p.addEventListener('animationend', function () { this.remove(); });
+      c.appendChild(p);
+    }
+    later(function () { c.remove(); }, 4500);
+  }
+  function banner(root, isStatic) {
+    var h = heatData();
+    var sig = h.signals || [];
+    var title = (sig.indexOf('record') >= 0) ? '🔥 NEW RECORD' : '🔥 ON FIRE';
+    var tok = fmtTokens(h.today);
+    var sub = tok ? tok + ' tokens' : 'the meter is screaming';
+    var b = document.createElement('div');
+    b.className = 'heatfx-banner' + (isStatic ? ' heatfx-static' : '');
+    var t1 = document.createElement('div');
+    t1.className = 'heatfx-banner-title';
+    t1.textContent = title;
+    var t2 = document.createElement('div');
+    t2.className = 'heatfx-banner-sub';
+    t2.textContent = sub;
+    b.appendChild(t1); b.appendChild(t2);
+    root.appendChild(b);
+  }
+  function vignette(root) {
+    var v = document.createElement('div');
+    v.className = 'heatfx-vignette';
+    root.appendChild(v);
+  }
+
+  /* ---------- build a tier (higher tiers add to lower) ---------- */
+  function rebuild(tier, opts) {
+    opts = opts || {};
+    clearTimers();
+    var root = overlay();
+    root.innerHTML = '';
+    removeBadge();
+    setGlow(false);
+    state.heroField = null;
+    state.mascot = null;
+    state.mascotTier = 0;
+
+    if (tier <= 0) return; // cool: nothing at all, zero CPU
+
+    // marker so re-assertion can tell "built" from "wiped"
+    var marker = document.createElement('i');
+    marker.style.display = 'none';
+    root.appendChild(marker);
+
+    setBadge(badgeText(tier));
+
+    if (REDUCED) { // statics only: badge + (tier 3) banner
+      if (tier === 3) banner(root, true);
+      return;
+    }
+
+    // embers: total capped at 26 (8 / 16 / 26)
+    var total = [0, 8, 16, 26][tier];
+    var heroN = Math.min(total, tier === 1 ? 8 : 10);
+    var hf = emberField(heroN);
+    root.appendChild(hf);
+    state.heroField = hf;
+    positionHeroField();
+    if (tier >= 2 && total - heroN > 0) {
+      var bf = emberField(total - heroN); // bottom-of-screen strip
+      bf.style.cssText += 'left:0;bottom:0;width:100vw;height:2px;';
+      root.appendChild(bf);
+    }
+
+    if (tier >= 2) {
+      setGlow(true);
+      addMascot(root, tier, !!opts.ride);
+    }
+
+    if (tier === 3) {
+      vignette(root);
+      banner(root, false);
+      if (opts.burst) {
+        confettiBurst(root);
+        moneyBlast(root);
+      } else {
+        // rebuilt without a rise (e.g. overlay got wiped): keep the hands, skip the blast
+        var wrap = document.createElement('div');
+        wrap.className = 'heatfx-money';
+        for (var hi = 0; hi < 2; hi++) {
+          var h = document.createElement('div');
+          h.className = 'heatfx-hand';
+          h.style.left = (hi ? 66 : 30) + '%';
+          h.textContent = '🙌';
+          wrap.appendChild(h);
+        }
+        root.appendChild(wrap);
+      }
+    }
+  }
+
+  // render() repaints page DOM every ~30s and can eat the badge / glow class;
+  // when tier is unchanged, quietly re-assert instead of rebuilding (no burst replays).
+  function reassert(tier) {
+    if (!document.getElementById('heatfx-badge')) setBadge(badgeText(tier));
+    if (tier >= 2) setGlow(true);
+    var ov = document.getElementById('heatfx');
+    if (!ov || !ov.firstChild) rebuild(tier, { ride: false, burst: false });
+    else {
+      positionHeroField(); positionMascot();
+      if (tier === 3) { var sub = ov.querySelector('.heatfx-banner-sub'); if (sub) { var tk = fmtTokens(heatData().today); if (tk) sub.textContent = tk + ' tokens'; } }
+    }
+  }
+
+  window.renderHeat = function () {
+    try {
+      var tier = effTier();
+      if (tier === lastTier) {
+        if (tier > 0) reassert(tier);
+        return;
+      }
+      var prev = lastTier;
+      lastTier = tier;
+      rebuild(tier, {
+        ride:  tier >= 2 && prev < 2,   // mascot rides in only when heat RISES into 2+
+        burst: tier === 3 && prev < 3   // confetti + money only when heat RISES into 3
+      });
+    } catch (e) {
+      // the party must never take down the dashboard
+      if (window.console && console.warn) console.warn('heatfx:', e);
+    }
+  };
+
+  /* ---------- housekeeping ---------- */
+  document.addEventListener('visibilitychange', function () {
+    document.documentElement.classList.toggle('heatfx-paused', document.hidden);
+  });
+
+  var rszTimer = null;
+  window.addEventListener('resize', function () {
+    clearTimeout(rszTimer);
+    rszTimer = setTimeout(function () {
+      positionHeroField();
+      positionMascot();
+    }, 150);
+  });
+
+  // hook the existing repaint loop
+  if (typeof window.render === 'function' && !window.render.__heatfxWrapped) {
+    var _r2 = window.render;
+    window.render = function () {
+      _r2.apply(this, arguments);
+      if (window.renderHeat) window.renderHeat();
+    };
+    window.render.__heatfxWrapped = true;
+  }
+
+  // first paint in case DATA is already here (or ?heat= override is set)
+  try { window.renderHeat(); } catch (e) {}
+})();
+</script>
