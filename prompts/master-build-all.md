@@ -1,8 +1,9 @@
 # master build — the one-paste version
 
-Runs Levels 1→3 as gated phases in a single session. Level 4 (the multi-agent
-driver mode) is intentionally NOT included — it changes how your session
-operates, not what the watcher is; adopt it separately.
+Runs Levels 1→3 as gated phases in a single session. Levels 4 and 5 are
+intentionally NOT included — Level 4 (the multi-agent driver mode) changes how
+your session operates, not what the watcher is, and Level 5 (usage & budget)
+layers onto a watcher you already run. Adopt each of those separately.
 
 Paste this into a Claude (Cowork / Claude Code) session:
 
