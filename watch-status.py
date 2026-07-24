@@ -323,11 +323,122 @@ if RELAY and os.path.isdir(RELAY):
         "log_last": tail_line(relay_log),
     }
 
+CWDIR = os.path.expanduser("~/.claude-watcher")
+
+def _ccusage_daily():
+    """Full-history daily usage from ccusage (local logs, zero auth). Cached 10 min so
+    the 60s generator never re-parses. Prefers a global `ccusage`, falls back to npx."""
+    import subprocess
+    cache = os.path.join(CWDIR, "ccusage-cache.json")
+    try:
+        if os.path.getmtime(cache) > now - 600:
+            return json.load(open(cache))
+    except Exception:
+        pass
+    env = {**os.environ, "PATH": "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin"}
+    cmds = [["/opt/homebrew/bin/ccusage", "daily", "--since", "20250101", "--json"],
+            ["ccusage", "daily", "--since", "20250101", "--json"],
+            ["npx", "-y", "ccusage@latest", "daily", "--since", "20250101", "--json"]]
+    for cmd in cmds:
+        try:
+            out = subprocess.run(cmd, capture_output=True, text=True, timeout=120, env=env)
+            daily = json.loads(out.stdout).get("daily", [])
+            if daily:
+                os.makedirs(CWDIR, exist_ok=True)
+                tmp = cache + ".tmp"; json.dump(daily, open(tmp, "w")); os.replace(tmp, cache)
+                return daily
+        except Exception:
+            continue
+    try: return json.load(open(cache))
+    except Exception: return []
+
+def budget_snapshot():
+    """TODAY / WEEK / MONTH / ALL-TIME token + cost cards with period-over-period
+    deltas, a 14-day sparkline, model mix, and the OAuth %-meters (from usage-probe's
+    meters.json). All local; never blocks the rest of the feed."""
+    import datetime
+    daily = _ccusage_daily()
+    by = {}
+    for d in daily:
+        p = d.get("period")
+        if p: by[p] = {"tok": d.get("totalTokens", 0) or 0, "cost": d.get("totalCost", 0.0) or 0.0}
+    today = datetime.date.today()
+    ds = lambda dt: dt.strftime("%Y-%m-%d")
+    def sum_days(pred):
+        t = c = 0.0
+        for p, v in by.items():
+            try: dt = datetime.date.fromisoformat(p)
+            except Exception: continue
+            if pred(dt): t += v["tok"]; c += v["cost"]
+        return t, c
+    td = by.get(ds(today), {"tok": 0, "cost": 0})
+    yd = by.get(ds(today - datetime.timedelta(days=1)), {"tok": 0, "cost": 0})
+    iso = today.isocalendar(); yw = lambda dt: dt.isocalendar()[:2]
+    tw = sum_days(lambda dt: yw(dt) == (iso[0], iso[1]))
+    lwi = (today - datetime.timedelta(days=7)).isocalendar()
+    lw = sum_days(lambda dt: yw(dt) == (lwi[0], lwi[1]))
+    tm = sum_days(lambda dt: (dt.year, dt.month) == (today.year, today.month))
+    pm = (today.year - 1, 12) if today.month == 1 else (today.year, today.month - 1)
+    lm = sum_days(lambda dt: (dt.year, dt.month) == pm)
+    at = sum_days(lambda dt: True)
+    dpct = lambda cur, prev: (round((cur - prev) / prev * 100, 1) if prev else None)
+    card = lambda ct, cc, pt, lab: {"tokens": int(ct), "cost": round(cc, 2),
+        "prior_tokens": int(pt), "prior_label": lab, "delta_pct": dpct(ct, pt)}
+    cards = {
+        "today": card(td["tok"], td["cost"], yd["tok"], "vs yesterday"),
+        "week":  card(tw[0], tw[1], lw[0], "vs last week"),
+        "month": card(tm[0], tm[1], lm[0], "vs last month"),
+        "all_time": {"tokens": int(at[0]), "cost": round(at[1], 2), "note": "all time"},
+    }
+    spark = []
+    for i in range(13, -1, -1):
+        dt = today - datetime.timedelta(days=i); v = by.get(ds(dt))
+        spark.append({"date": ds(dt), "tokens": int(v["tok"]) if v else 0})
+    mm = {}
+    for d in daily:
+        try: dt = datetime.date.fromisoformat(d.get("period"))
+        except Exception: continue
+        if dt > today or (today - dt).days > 30: continue
+        for mb in d.get("modelBreakdowns", []):
+            name = (mb.get("modelName") or "?").replace("claude-", "")
+            e = mm.setdefault(name, {"tok": 0, "cost": 0.0})
+            e["tok"] += (mb.get("cacheReadTokens", 0) + mb.get("cacheCreationTokens", 0)
+                         + mb.get("inputTokens", 0) + mb.get("outputTokens", 0))
+            e["cost"] += mb.get("cost", 0.0)
+    tot = sum(v["tok"] for v in mm.values()) or 1
+    model_mix = sorted([{"model": k, "tokens": int(v["tok"]), "cost": round(v["cost"], 2),
+                         "pct": round(v["tok"] / tot * 100)} for k, v in mm.items()],
+                        key=lambda x: -x["tokens"])[:6]
+    meters = None
+    try:
+        mf = os.path.join(CWDIR, "meters.json")
+        meters = json.load(open(mf)); meters["age_s"] = int(now - os.path.getmtime(mf))
+    except Exception: pass
+    try: upd = max(0, int(now - os.path.getmtime(os.path.join(CWDIR, "ccusage-cache.json"))))
+    except Exception: upd = None
+    return {"cards": cards, "sparkline": spark, "model_mix": model_mix,
+            "meters": meters, "updated_s": upd}
+
+try:
+    budget = budget_snapshot()
+except Exception as e:
+    budget = {"error": str(e)[:160]}
+
+_m = (budget or {}).get("meters") or {}
+_mage = _m.get("age_s")
+if _m.get("ok") and _mage is not None and _mage < 3600 and _m.get("summary"):
+    usage_last = _m["summary"]
+elif RELAY and os.path.isdir(RELAY):
+    usage_last = tail_line(os.path.join(RELAY, ".usage-log"))[:400]
+else:
+    usage_last = ""
+
 status = {
     "generated_at": int(now),
     "sessions": sessions,
     "relay": relay,
-    "usage_last": tail_line(os.path.join(RELAY, ".usage-log"))[:400] if RELAY and os.path.isdir(RELAY) else "",
+    "budget": budget,
+    "usage_last": usage_last,
 }
 os.makedirs(OUT_DIR, exist_ok=True)
 tmp = OUT + ".tmp"

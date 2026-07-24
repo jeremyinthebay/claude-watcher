@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex,nofollow">
-<title>Claude Watcher</title><!-- github.com/jeremyinthebay/claude-watcher -->
+<title>Claude Watcher</title>
 <meta name="description" content="Live view of every Claude session on the mini — who's actually working, who's idle, and what each agent is doing.">
 <style>
 :root{--bg:#14181d;--card:#1c222a;--card2:#161c23;--ink:#e9edf2;--mut:#9aa7b4;--faint:#5c6670;
@@ -15,7 +15,6 @@ body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 -apple-system,
 .wrap{max-width:860px;margin:0 auto;padding:32px 18px 60px}
 h1{font-size:24px;margin:0}
 .sub{color:var(--mut);font-size:13px;margin:6px 0 14px}
-/* topbar: sticky chips + search */
 .topbar{position:sticky;top:0;z-index:5;display:flex;gap:10px;align-items:center;flex-wrap:wrap;
   background:rgba(20,24,29,.88);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
   padding:10px 0;margin:0 0 10px}
@@ -29,7 +28,6 @@ h1{font-size:24px;margin:0}
 .card:hover{border-color:#3a4550}
 .empty{color:var(--faint);font-size:14px}
 .empty a{color:var(--acc);cursor:pointer}
-/* summary strip */
 .strip{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .chip{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;border:1px solid var(--line);
   border-radius:999px;padding:3px 12px;color:var(--mut);background:var(--card2)}
@@ -37,7 +35,6 @@ h1{font-size:24px;margin:0}
 .chip .d{width:8px;height:8px;border-radius:50%}
 .chip.paused{color:var(--warn);border-color:rgba(224,178,74,.4)}
 .chip.dead{color:var(--red);border-color:rgba(229,72,77,.5)}
-/* session cards */
 .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin:10px 0}
 .row{display:flex;align-items:baseline;gap:10px}
 .dot{width:10px;height:10px;border-radius:50%;flex:0 0 10px;align-self:center}
@@ -52,7 +49,6 @@ h1{font-size:24px;margin:0}
 .doing{display:flex;gap:8px;align-items:center;margin:8px 0 0 20px;color:var(--mut);font-size:12.5px;min-width:0}
 .doing .ico{flex:0 0 auto}
 .doing code{font:12px var(--mono);color:#c6d2df;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-/* subagent rows */
 .subs{margin:10px 0 2px 20px;border-left:2px solid var(--line);padding-left:12px}
 .sa{display:flex;align-items:center;gap:8px;padding:4px 0;min-width:0}
 .sa .sd{width:7px;height:7px;border-radius:50%;flex:0 0 7px}
@@ -83,18 +79,127 @@ code{font:12px var(--mono);color:#d7e2ee;word-break:break-all}
   .sa .rt{display:none}
 }
 </style>
+<style>
+/* ---------- budget / usage section ---------- */
+@property --p{syntax:'<percentage>';inherits:false;initial-value:0%}
+.budget{margin:6px 0 4px}
+.bhead{display:flex;align-items:baseline;gap:10px;margin:18px 0 10px}
+.bhead h2{margin:0}
+.bstamp{margin-left:auto;color:var(--faint);font-size:11.5px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.bwarn{background:rgba(229,72,77,.08);border:1px solid rgba(229,72,77,.4);border-radius:12px;
+  padding:9px 14px;margin:0 0 10px;color:var(--red);font-size:12.5px}
+.bwarn b{color:var(--ink)}
+.bwarn .tail{color:var(--faint);font:11px var(--mono)}
+.heroes{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.hero{position:relative;background:linear-gradient(180deg,var(--card) 0%,var(--card2) 130%);
+  border:1px solid var(--line);border-radius:14px;padding:13px 15px 12px;overflow:hidden;
+  transition:border-color .15s,transform .15s}
+.hero:hover{border-color:#3a4550}
+.hero::before{content:"";position:absolute;top:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,transparent 5%,rgba(224,178,74,.55) 50%,transparent 95%)}
+.hlabel{font-size:10.5px;font-weight:700;letter-spacing:.15em;color:var(--faint)}
+.hnum{font-size:28px;font-weight:700;letter-spacing:-.01em;color:var(--ink);
+  font-variant-numeric:tabular-nums;line-height:1.25;margin:2px 0 1px}
+.hdelta{font-size:12px;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hdelta.up{color:var(--red)}
+.hdelta.down{color:var(--ok)}
+.hdelta.flat{color:var(--faint)}
+.hdelta .hvs{color:var(--faint)}
+.hcost{position:absolute;top:9px;right:11px;font:11px var(--mono);color:var(--acc);
+  background:rgba(224,178,74,.1);border:1px solid rgba(224,178,74,.28);border-radius:999px;padding:2px 8px;
+  font-variant-numeric:tabular-nums}
+.bgrid{display:grid;grid-template-columns:3fr 2fr;gap:10px;margin-top:10px}
+.bcard{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px;
+  transition:border-color .15s;min-width:0}
+.bcard:hover{border-color:#3a4550}
+.blabel{font-size:10.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--faint);margin:0 0 10px}
+.berr{grid-column:1/-1;color:var(--red);font-size:13px}
+.bmut{color:var(--faint);font-size:13px}
+/* 14-day trend */
+.tbars{display:flex;gap:4px;align-items:flex-end;height:76px}
+.tcol{flex:1;display:flex;align-items:flex-end;height:100%;min-width:0;cursor:default}
+.tbar{width:100%;background:var(--acc);border-radius:3px 3px 1px 1px;transform-origin:bottom;
+  transition:filter .12s}
+.tcol:hover .tbar{filter:brightness(1.35)}
+.tbar.now{box-shadow:0 0 10px rgba(224,178,74,.55),0 0 2px rgba(224,178,74,.8)}
+.taxis{display:flex;justify-content:space-between;margin-top:6px;font-size:10.5px;color:var(--faint);
+  font-variant-numeric:tabular-nums}
+.taxis .now{color:var(--acc);font-weight:700;letter-spacing:.04em}
+/* model mix */
+.mixbar{display:flex;height:14px;border-radius:999px;overflow:hidden;background:var(--card2);
+  border:1px solid var(--line)}
+.mseg{transform-origin:left;min-width:3px}
+.mseg+.mseg{border-left:2px solid var(--card)}
+.mlegend{margin-top:11px;display:flex;flex-direction:column;gap:6px}
+.mrow{display:flex;align-items:center;gap:8px;font-size:12.5px;min-width:0}
+.mdot{width:9px;height:9px;border-radius:3px;flex:0 0 9px}
+.mname{color:var(--ink);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mpct{color:var(--mut);font-variant-numeric:tabular-nums;flex:0 0 auto}
+.mcost{margin-left:auto;color:var(--faint);font:11px var(--mono);white-space:nowrap;
+  font-variant-numeric:tabular-nums;flex:0 0 auto}
+/* meters */
+.mcardx{margin-top:10px}
+.meters{display:flex;gap:26px;row-gap:14px;flex-wrap:wrap;align-items:center}
+.meter{display:flex;align-items:center;gap:11px}
+.gauge{width:72px;height:72px;border-radius:50%;position:relative;flex:0 0 72px;
+  display:flex;align-items:center;justify-content:center;
+  background:conic-gradient(var(--gc,var(--ok)) var(--p,0%),#242c35 0);
+  transition:--p .9s cubic-bezier(.2,.8,.2,1)}
+.gauge::before{content:"";position:absolute;inset:7px;border-radius:50%;background:var(--card)}
+.gauge b{position:relative;font-size:13.5px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--ink)}
+.gauge.goff{background:#242c35}
+.gauge.goff b{color:var(--faint);font-weight:600}
+.mlab{font-size:12.5px;color:var(--mut);line-height:1.4;font-weight:600}
+.msub{display:block;color:var(--faint);font-size:11px;font-weight:400;font-variant-numeric:tabular-nums}
+.mfoot{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:12px}
+.mfoot .chip{font-size:11.5px;padding:2px 10px}
+.mfoot .age{margin-left:auto;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums}
+/* entrance motion — only while .anim is on the section (first paint) */
+.budget.anim .tbar{animation:bgrow .55s cubic-bezier(.2,.8,.25,1) backwards}
+.budget.anim .mseg{animation:bgrowx .7s cubic-bezier(.2,.8,.25,1) backwards}
+.budget.anim .hero{animation:bfade .45s ease backwards}
+@keyframes bgrow{from{transform:scaleY(0)}}
+@keyframes bgrowx{from{transform:scaleX(0)}}
+@keyframes bfade{from{opacity:0;transform:translateY(6px)}}
+@media (prefers-reduced-motion:reduce){
+  .budget.anim .tbar,.budget.anim .mseg,.budget.anim .hero{animation:none}
+  .gauge{transition:none}
+}
+@media(max-width:720px){
+  .heroes{grid-template-columns:repeat(2,1fr)}
+  .bgrid{grid-template-columns:1fr}
+  .hnum{font-size:24px}
+}
+@media(max-width:360px){
+  .heroes{grid-template-columns:1fr}
+}
+</style>
 </head>
 <body>
 <div class="wrap">
 <h1>Claude Watcher</h1>
 <p class="sub">Observed from outside — file writes and transcript tails, never self-reporting. Local sessions only
 (cloud <code>session_</code> IDs leave no tracks here). Auto-refreshes every 30s.</p>
+
+<!-- ============ budget / usage (rendered by renderBudget) ============ -->
+<section class="budget" id="budget" hidden>
+  <div class="bhead"><h2>Usage &amp; Budget</h2><span class="bstamp" id="bstamp"></span></div>
+  <div class="bwarn" id="bwarn" hidden></div>
+  <div class="heroes" id="heroes"></div>
+  <div class="bgrid" id="bgrid">
+    <div class="bcard"><div class="blabel">14-day trend</div><div id="trend"></div></div>
+    <div class="bcard"><div class="blabel">Model mix</div><div id="mix"></div></div>
+  </div>
+  <div class="bcard mcardx" id="mcardx"><div class="blabel">Rate limits</div><div id="meters"></div></div>
+</section>
+
+<h2>Sessions</h2>
 <div class="topbar"><div class="strip" id="strip"></div><input id="q" class="search" type="search" placeholder="filter sessions…" autocomplete="off"></div>
 <div id="sessions"></div>
 <h2>Relay</h2>
 <div class="card" id="relay"></div>
-<h2>Last budget probe</h2>
-<div class="card"><code id="usage"></code></div>
+<div class="card" hidden><code id="usage"></code></div>
 <p class="stamp" id="stamp"></p>
 </div>
 <script>
@@ -171,7 +276,7 @@ function render(){
   document.getElementById("usage").innerHTML=bad
     ?'<span style="color:var(--red)">⚠ probe failing — Claude Code\'s OAuth token was cleared. Fix: run <b>claude login</b> on this Mac.</span><br><span style="color:var(--faint)" title="'+esc(ul).replace(/"/g,"&quot;")+'">'+esc(ul.slice(0,110))+'…</span>'
     :esc(ul);
-  document.getElementById("stamp").textContent="Generated "+ago(genAge)+" · regenerates every 60s";
+  document.getElementById("stamp").textContent="Generated "+ago(genAge)+" · regenerates every 60s on the mini";
 }
 document.getElementById("strip").addEventListener("click",function(e){
   var c=e.target.closest(".tog");if(!c)return;
@@ -183,12 +288,200 @@ async function load(){
     var r=await fetch("status.json?cb="+Date.now());DATA=await r.json();render();
   }catch(e){
     if(INLINE){render()}
-    else document.getElementById("stamp").textContent="status.json unreachable — generator may be off";
+    else document.getElementById("stamp").textContent="status.json unreachable — generator may be off"
   }
 }
 if(INLINE){render()}
 load();setInterval(load,30000);
 if(INLINE&&location.protocol==="file:"){setTimeout(function(){location.reload()},60000)}
+</script>
+<script>
+/* ============ budget section — additive only. Wraps render() so every
+   refresh also repaints the budget panels; touches no existing ids. ============ */
+(function(){
+"use strict";
+var firstPaint=true;
+
+function fmtM(t){
+  t=+t||0;
+  if(!t)return "0";
+  if(t<1e6)return Math.round(t/1e3)+"k";
+  return (t/1e6).toLocaleString("en-US",{minimumFractionDigits:1,maximumFractionDigits:1})+"M";
+}
+function fmtCost(c){return "$"+(+c||0).toFixed(2)}
+function gaugeColor(p){return p>=80?"var(--red)":p>=60?"var(--warn)":"var(--ok)"}
+function modelColor(m){
+  m=String(m||"").toLowerCase();
+  if(m.indexOf("opus")>=0)return "#e5484d";
+  if(m.indexOf("sonnet")>=0)return "#e0b24a";
+  if(m.indexOf("haiku")>=0)return "#4cc38a";
+  return "#5c6670";
+}
+function shortModel(m){return String(m||"").replace(/-\d{8}$/,"")}
+function fdate(d){
+  var mo=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  var p=String(d||"").split("-");
+  return p.length===3?mo[(+p[1]-1)]+" "+(+p[2]):esc(d);
+}
+function countUp(el,target){
+  var t0=performance.now(),dur=900;
+  function step(t){
+    var k=Math.min(1,(t-t0)/dur);k=1-Math.pow(1-k,3);
+    el.textContent=fmtM(target*k);
+    if(k<1)requestAnimationFrame(step);else el.textContent=fmtM(target);
+  }
+  requestAnimationFrame(step);
+}
+
+function heroCard(key,label,c,i){
+  if(!c)return '<div class="hero" style="animation-delay:'+(i*60)+'ms"><div class="hlabel">'+label+'</div><div class="hnum">—</div><div class="hdelta flat">no data</div></div>';
+  var deltaHtml;
+  if(key==="all_time"){
+    deltaHtml='<div class="hdelta flat">'+esc(c.note||"all time")+'</div>';
+  }else if(c.delta_pct==null){
+    deltaHtml='<div class="hdelta flat">—</div>';
+  }else{
+    var up=c.delta_pct>0, down=c.delta_pct<0;
+    var cls=up?"up":down?"down":"flat", tri=up?"▲":down?"▼":"—";
+    var pfx=up?"+":"";
+    var vs=c.prior_tokens!=null?' <span class="hvs">vs '+fmtM(c.prior_tokens)+'</span>':'';
+    deltaHtml='<div class="hdelta '+cls+'" title="'+esc(c.prior_label||"")+
+      (c.prior_tokens!=null?': '+fmtM(c.prior_tokens)+' tokens':'')+'">'+
+      tri+' '+pfx+(+c.delta_pct).toFixed(1)+'%'+vs+'</div>';
+  }
+  return '<div class="hero" style="animation-delay:'+(i*60)+'ms">'+
+    '<div class="hlabel">'+label+'</div>'+
+    '<div class="hnum" data-tok="'+(+c.tokens||0)+'">'+fmtM(c.tokens)+'</div>'+
+    deltaHtml+
+    (c.cost>0?'<div class="hcost" title="cost">'+fmtCost(c.cost)+'</div>':'')+
+    '</div>';
+}
+
+function renderTrend(sp){
+  var el=document.getElementById("trend");
+  if(!sp||!sp.length){el.innerHTML='<div class="bmut">no trend data yet</div>';return}
+  var mx=Math.max.apply(null,sp.map(function(x){return x.tokens||0}).concat([1]));
+  var n=sp.length;
+  el.innerHTML='<div class="tbars">'+sp.map(function(x,i){
+    var v=x.tokens||0;
+    var h=Math.max(3,Math.round(v/mx*74));
+    var last=i===n-1;
+    var op=v?(0.35+0.65*(i/Math.max(1,n-1))).toFixed(2):"0.15";
+    return '<div class="tcol" title="'+esc(x.date)+' · '+fmtM(v)+' tokens">'+
+      '<div class="tbar'+(last?' now':'')+'" style="height:'+h+'px;'+
+      (last&&v?'':'opacity:'+op+';')+'animation-delay:'+(i*40)+'ms"></div></div>';
+  }).join("")+'</div>'+
+  '<div class="taxis"><span>'+fdate(sp[0].date)+'</span><span class="now">today</span></div>';
+}
+
+function renderMix(mm){
+  var el=document.getElementById("mix");
+  if(!mm||!mm.length){el.innerHTML='<div class="bmut">no model data yet</div>';return}
+  var bar=mm.map(function(x,i){
+    var t='title="'+esc(shortModel(x.model))+' · '+(x.pct||0)+'% · '+fmtM(x.tokens)+' tokens · '+fmtCost(x.cost)+'"';
+    return '<div class="mseg" '+t+' style="flex:'+Math.max(1,+x.tokens||1)+
+      ';background:'+modelColor(x.model)+';animation-delay:'+(i*90)+'ms"></div>';
+  }).join("");
+  var legend=mm.map(function(x){
+    var pct=(x.pct===0&&x.tokens>0)?"&lt;1%":(x.pct||0)+"%";
+    return '<div class="mrow"><span class="mdot" style="background:'+modelColor(x.model)+'"></span>'+
+      '<span class="mname">'+esc(shortModel(x.model))+'</span>'+
+      '<span class="mpct">'+pct+'</span>'+
+      '<span class="mcost">'+fmtM(x.tokens)+' · '+fmtCost(x.cost)+'</span></div>';
+  }).join("");
+  el.innerHTML='<div class="mixbar">'+bar+'</div><div class="mlegend">'+legend+'</div>';
+}
+
+function gaugeHtml(label,pct,sub){
+  pct=Math.max(0,Math.min(100,Math.round(+pct||0)));
+  return '<div class="meter"><div class="gauge" data-p="'+pct+'" style="--p:'+pct+'%;--gc:'+gaugeColor(pct)+'">'+
+    '<b>'+pct+'%</b></div><div class="mlab">'+label+'<span class="msub">'+sub+'</span></div></div>';
+}
+function renderMeters(m){
+  var el=document.getElementById("meters");
+  if(!m||m.ok===false){
+    el.innerHTML='<div class="bmut">meters pending — probe hasn\'t run yet</div>';
+    return;
+  }
+  var h=gaugeHtml("Session",m.session_pct,"resets "+esc(m.session_resets||"—"))+
+        gaugeHtml("Weekly",m.weekly_pct,"resets "+esc(m.weekly_resets||"—"));
+  if(m.extra&&m.extra.enabled){
+    var ep=m.extra.pct!=null?m.extra.pct:(m.extra.cap?100*m.extra.used/m.extra.cap:0);
+    h+=gaugeHtml("Extra",ep,fmtCost(m.extra.used)+" of $"+(+m.extra.cap||0).toFixed(0));
+  }else{
+    h+='<div class="meter"><div class="gauge goff"><b>—</b></div><div class="mlab">Extra<span class="msub">overage off</span></div></div>';
+  }
+  var foot="";
+  (m.scoped||[]).forEach(function(s){
+    var p=Math.round(+s.pct||0);
+    foot+='<span class="chip" style="color:'+gaugeColor(p)+'"><b>'+esc(s.name)+'</b> '+p+'%</span>';
+  });
+  if(m.age_s!=null)foot+='<span class="age">probed '+ago(m.age_s)+'</span>';
+  el.innerHTML='<div class="meters">'+h+'</div>'+(foot?'<div class="mfoot">'+foot+'</div>':'');
+}
+
+window.renderBudget=function(){
+  var sec=document.getElementById("budget");
+  if(!DATA){sec.hidden=true;return}
+  var b=DATA.budget;
+  if(!b){sec.hidden=true;return}
+  sec.hidden=false;
+
+  /* tiny inline probe warning (replaces the old "Last budget probe" card) */
+  var warn=document.getElementById("bwarn"), ul=DATA.usage_last||"";
+  if(/ERROR|expired|no-oauth/i.test(ul)){
+    warn.hidden=false;
+    warn.innerHTML='⚠ budget probe failing — run <b>claude login</b> on the mini. '+
+      '<span class="tail" title="'+esc(ul).replace(/"/g,"&quot;")+'">'+esc(ul.slice(0,80))+'…</span>';
+  }else warn.hidden=true;
+
+  var heroes=document.getElementById("heroes"),
+      bgrid=document.getElementById("bgrid"),
+      mcardx=document.getElementById("mcardx"),
+      bstamp=document.getElementById("bstamp");
+
+  if(b.error){
+    heroes.innerHTML='<div class="bcard berr">⚠ budget data unavailable: <code>'+esc(b.error)+'</code></div>';
+    heroes.style.gridTemplateColumns="1fr";
+    bgrid.hidden=true;mcardx.hidden=true;bstamp.textContent="";
+    return;
+  }
+  heroes.style.gridTemplateColumns="";
+  bgrid.hidden=false;mcardx.hidden=false;
+  bstamp.textContent=b.updated_s!=null?"updated "+ago(b.updated_s):"";
+
+  var cards=b.cards||{};
+  heroes.innerHTML=[["today","TODAY"],["week","THIS WEEK"],["month","THIS MONTH"],["all_time","ALL TIME"]]
+    .map(function(o,i){return heroCard(o[0],o[1],cards[o[0]],i)}).join("");
+
+  renderTrend(b.sparkline);
+  renderMix(b.model_mix);
+  renderMeters(b.meters);
+
+  if(firstPaint){
+    firstPaint=false;
+    sec.classList.add("anim");
+    /* count the hero numbers up */
+    Array.prototype.forEach.call(heroes.querySelectorAll(".hnum[data-tok]"),function(el){
+      countUp(el,+el.getAttribute("data-tok"));
+    });
+    /* sweep the gauges from 0 to their value */
+    Array.prototype.forEach.call(document.querySelectorAll("#meters .gauge[data-p]"),function(g){
+      var target=g.style.getPropertyValue("--p");
+      g.style.setProperty("--p","0%");
+      requestAnimationFrame(function(){requestAnimationFrame(function(){
+        g.style.setProperty("--p",target);
+      })});
+    });
+    setTimeout(function(){sec.classList.remove("anim")},1900);
+  }
+};
+
+/* wrap the existing render() so the budget repaints on every refresh */
+var _render=render;
+render=function(){_render();renderBudget()};
+if(DATA)renderBudget();
+})();
 </script>
 </body>
 </html>
