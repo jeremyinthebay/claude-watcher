@@ -42,6 +42,12 @@ and pass it as an env var to ccusage. It dedupes by message id, so overlaps are 
 Sort those dirs by mtime and cap the list (~2000) so the env string can't grow
 without bound as sessions pile up.
 
+TRAP — `ccusage daily` is trustworthy; `ccusage session` is not.
+If you drill from "today cost $X" into "which session did it", note that
+`session --since` selects which sessions APPEAR by activity date and then reports each
+one's FULL LIFETIME cost. It overstated one day for me by 2.52x. Level 6 covers the
+fix; for now, build the budget cards on `daily` only.
+
 DATA SOURCE 2 — the real %-meters (a SELF-HEALING OAuth probe)
 The Session/Weekly/Extra gauges come from the same endpoint the CLI's /usage screen
 uses: GET https://api.anthropic.com/api/oauth/usage with your Claude Code OAuth token
